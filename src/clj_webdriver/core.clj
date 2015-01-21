@@ -188,15 +188,18 @@
      (let [{:keys [browser profile] :or {browser :firefox
                                          profile nil}} browser-spec]
        (if (= browser :phantomjs)
-         (let [phantomjs-opts (-> browser-spec
-                                  :phantomjs-opts
-                                  into-array)
-               browser-capabilities (DesiredCapabilities.)]
-           (doto browser-capabilities
-             (.setJavascriptEnabled "true")
-             (.setCapability "takesScreenshot" true)
-             (.setCapability PhantomJSDriverService/PHANTOMJS_CLI_ARGS phantomjs-opts))
-           (PhantomJSDriver. browser-capabilities))
+         (do (println "YOYOYOY")
+             (let [phantomjs-opts (-> browser-spec
+                                      :phantomjs-opts
+                                      into-array)
+                   browser-capabilities (DesiredCapabilities.)]
+               (doto browser-capabilities
+                 (.setJavascriptEnabled true)
+                 (.setCapability "takesScreenshot" true)
+                 (.setCapability PhantomJSDriverService/PHANTOMJS_CLI_ARGS
+                                 phantomjs-opts))
+               (println browser-capabilities)
+               (PhantomJSDriver. browser-capabilities)))
          (if-not profile
            (.newInstance (webdriver-drivers (keyword browser)))
            (FirefoxDriver. profile))))))
