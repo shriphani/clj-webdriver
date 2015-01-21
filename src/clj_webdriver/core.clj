@@ -31,6 +31,7 @@
            [org.openqa.selenium.ie InternetExplorerDriver]
            [org.openqa.selenium.chrome ChromeDriver]
            [org.openqa.selenium.phantomjs PhantomJSDriver]
+           [org.openqa.selenium.phantomjs PhantomJSDriverService]
            [org.openqa.selenium.htmlunit HtmlUnitDriver]
            [org.openqa.selenium.support.ui Select]
            [org.openqa.selenium.interactions Actions CompositeAction]
@@ -180,13 +181,25 @@
    :htmlunit HtmlUnitDriver})
 
 (defn new-webdriver*
-  "Return a Selenium-WebDriver WebDriver instance, optionally configured to leverage a custom FirefoxProfile."
+  "Return a Selenium-WebDriver WebDriver instance, optionally configured to leverage a custom FirefoxProfile.
+  If Phantomjs is being used, allow user to pass in command-line args.
+  Command line args are specified as clojure keywords"
   ([browser-spec]
      (let [{:keys [browser profile] :or {browser :firefox
                                          profile nil}} browser-spec]
-       (if-not profile
-         (.newInstance (webdriver-drivers (keyword browser)))
-         (FirefoxDriver. profile)))))
+       (if (= browser :phantomjs)
+         (let [phantomjs-opts (-> browser-spec
+                                  :phantomjs-opts
+                                  into-array)
+               browser-capabilities (DesiredCapabilities.)]
+           (doto browser-capabilities
+             (.setJavascriptEnabled "true")
+             (.setCapability "takesScreenshot" true)
+             (.setCapability PhantomJSDriverService/PHANTOMJS_CLI_ARGS phantomjs-opts))
+           (PhantomJSDriver. browser-capabilities))
+         (if-not profile
+           (.newInstance (webdriver-drivers (keyword browser)))
+           (FirefoxDriver. profile))))))
 
 (defn new-driver
   "Start a new Driver instance. The `browser-spec` can include `:browser`, `:profile`, and `:cache-spec` keys.
@@ -195,12 +208,13 @@
    The `:profile` should be an instance of FirefoxProfile you wish to use.
    The `:cache-spec` can contain `:strategy`, `:args`, `:include` and/or `:exclude keys. See documentation on caching for more details."
   ([browser-spec]
-     (let [{:keys [browser profile cache-spec] :or {browser :firefox
-                                                    profile nil
-                                                    cache-spec {}}} browser-spec]
+     (let [{:keys [browser profile cache-spec phantomjs-opts] :or {browser :firefox
+                                                                   profile nil
+                                                                   cache-spec {}}} browser-spec]
 
        (init-driver {:webdriver (new-webdriver* {:browser browser
-                                                 :profile profile})
+                                                 :profile profile
+                                                 :phantomjs-opts phantomjs-opts})
                      :cache-spec cache-spec}))))
 
 ;; Chrome binary, common location of Chromium on Linux
